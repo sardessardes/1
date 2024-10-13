@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event RSVP</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+        }
+
+        #image-container {
+            flex-grow: 1;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        /* RSVP Butonunun Normal Boyutlandırılması */
+        #rsvp-btn {
+            margin: 20px;
+            padding: 10px 20px;
+            background-color: #f04e45;
+            color: white;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            align-self: center;
+            max-width: 200px;
+            width: 100%;
+        }
+
+        #rsvp-form {
+            display: none;
+            position: fixed; /* Form her zaman ekranda kalacak */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto; /* Küçük ekranlarda kaydırma eklemek için */
+            z-index: 1000; /* Formun her zaman üstte görünmesi için */
+        }
+
+        #rsvp-form h2 {
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            box-sizing: border-box;
+        }
+
+        #submit-btn {
+            width: 100%;
+            padding: 15px;
+            background-color: #28a745;
+            color: white;
+            font-size: 18px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        /* Hidden fields for email/phone */
+        #email-field, #phone-field {
+            display: none;
+        }
+
+        /* Responsive Tasarım için Medya Sorguları */
+        @media (max-width: 600px) {
+            #rsvp-btn {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+
+            #submit-btn {
+                font-size: 16px;
+                padding: 12px;
+            }
+        }
+
+        /* Kilitlenmiş alanlar için stil */
+        .disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        /* Form kapatma butonu */
+        #close-form {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Güvenlik Uyarısı ve Kabul Metni */
+        .security-warning {
+            background-color: #ffcc00;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .security-warning p {
+            margin: 0;
+        }
+
+        .required-star {
+            color: red;
+        }
+
+        /* Acceptance Checkbox */
+        .acceptance-group {
+            margin-top: 10px;
+        }
+
+        .acceptance-group input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="image-container"></div>
+    
+    <button id="rsvp-btn">RSVP</button>
+
+    <div id="rsvp-form">
+        <button id="close-form">&times;</button>
+        <h2>RSVP Formu</h2>
+
+        <!-- Güvenlik Uyarısı ve Kabul Metni -->
+        <div class="form-group security-warning">
+            <p><strong>Veri Güvenliği Uyarısı:</strong> Girdiğiniz iletişim bilgileriniz (Email veya Telefon Numarası) yalnızca etkinlik güncellemeleri için kullanılacak ve üçüncü şahıslarla paylaşılmayacaktır. Lütfen bilgilerinizi doğru ve güncel girdiğinizden emin olun.</p>
+        </div>
+
+        <!-- Participant Name Field (Aile İsmi) - Zorunlu -->
+        <div class="form-group">
+            <label for="participantName">Aile İsmi <span class="required-star">*</span></label>
+            <input type="text" id="participantName" placeholder="Ailenizin soyadını girin" required>
+        </div>
+
+        <!-- Optional Fields -->
+        <div class="form-group">
+            <label>Etkinliğe katılacak mısınız?</label>
+            <select id="attend">
+                <option value="">?</option>
+                <option value="Yes">Evet</option>
+                <option value="No">Hayır</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Yanınızda kaç kişi daha katılacak?</label>
+            <input type="number" id="adults" placeholder="Yetişkin sayısı">
+            <input type="number" id="children" placeholder="Çocuk sayısı">
+        </div>
+        <div class="form-group">
+            <label>Yemek tercihinizi belirtiniz.</label>
+            <select id="mealPreference">
+                <option value="">?</option>
+                <option value="Vegetarian">Vejetaryen</option>
+                <option value="Vegan">Vegan</option>
+                <option value="Gluten-free">Glutensiz</option>
+                <option value="Other">Diğer</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Herhangi bir diyet kısıtlamanız var mı?</label>
+            <textarea id="dietaryRestrictions" placeholder="Lütfen belirtiniz"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Ulaşım veya konaklama yardımı mı ihtiyacınız var?</label>
+            <select id="transportation">
+                <option value="">?</option>
+                <option value="Yes">Evet</option>
+                <option value="No">Hayır</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Güncellemeler için tercih ettiğiniz iletişim bilgisi nedir?</label>
+            <select id="contactPreference">
+                <option value="">?</option>
+                <option value="Email">Email</option>
+                <option value="Phone number">Telefon Numarası</option>
+            </select>
+        </div>
+
+        <!-- Email and Phone input fields with acceptance checkbox -->
+        <div class="form-group" id="email-field">
+            <label>Email Adresi</label>
+            <input type="email" id="email" placeholder="Email adresinizi girin">
+            <div class="acceptance-group">
+                <input type="checkbox" id="accept-email">
+                <label for="accept-email">Veri güvenliği politikasını kabul ediyorum.</label>
+            </div>
+        </div>
+        <div class="form-group" id="phone-field">
+            <label>Telefon Numarası</label>
+            <input type="tel" id="phone" placeholder="Telefon numaranızı girin">
+            <div class="acceptance-group">
+                <input type="checkbox" id="accept-phone">
+                <label for="accept-phone">Veri güvenliği politikasını kabul ediyorum.</label>
+            </div>
+        </div>
+
+        <button id="submit-btn">Gönder</button>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+
+    <script>
+        // Firebase yapılandırması
+        var firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "invitemaster-ed7b2.firebaseapp.com",
+            projectId: "invitemaster-ed7b2",
+            storageBucket: "invitemaster-ed7b2.appspot.com",
+            messagingSenderId: "299753728539",
+            appId: "1:299753728539:web:bd88b486b62296f8d9a6be",
+            measurementId: "G-YKQKR7EHSV"
+        };
+
+        // Firebase'i başlat
+        firebase.initializeApp(firebaseConfig);
+        var db = firebase.firestore();
+        var storage = firebase.storage();
+
+        // Firebase Storage'dan resmi yükle
+        var imageRef = storage.ref('invitations/h9o5jNodUi24Qx1e1Y1bkr.png');
+        imageRef.getDownloadURL().then(function(url) {
+            document.getElementById('image-container').style.backgroundImage = `url(${url})`;
+        }).catch(function(error) {
+            console.log("Resim yüklenirken hata oluştu: ", error);
+        });
+
+        // İletişim tercihine göre email ve telefon alanlarını göster/gizle
+        document.getElementById('contactPreference').addEventListener('change', function() {
+            var contactPref = this.value;
+            document.getElementById('email-field').style.display = (contactPref === 'Email') ? 'block' : 'none';
+            document.getElementById('phone-field').style.display = (contactPref === 'Phone number') ? 'block' : 'none';
+        });
+
+        // RSVP formunu göster
+        document.getElementById('rsvp-btn').addEventListener('click', function() {
+            document.getElementById('rsvp-form').style.display = 'block';
+        });
+
+        // Form kapatma butonuna tıklandığında formu gizle
+        document.getElementById('close-form').addEventListener('click', function() {
+            document.getElementById('rsvp-form').style.display = 'none';
+        });
+
+        // Formu yerel depolamadan kontrol et ve formu doldur
+        function loadFormData() {
+            var savedData = JSON.parse(localStorage.getItem('rsvpData'));
+            if (savedData && savedData.name) {
+                var participantName = savedData.name.trim().toLowerCase();
+                if (!participantName) {
+                    // Geçersiz isim, localStorage'u temizle
+                    localStorage.removeItem('rsvpData');
+                    return;
+                }
+
+                // Firestore'dan mevcut RSVP'leri al
+                var docRef = db.collection("numbers").doc("h9o5jNodUi24Qx1e1Y1bkr");
+                docRef.get().then(function(doc) {
+                    if (doc.exists) {
+                        var data = doc.data();
+                        var responses = data.rsvpResponses || [];
+
+                        // Katılımcı ismini veritabanında kontrol et
+                        var existingResponse = responses.find(function(response) {
+                            return response.name.trim().toLowerCase() === participantName;
+                        });
+
+                        if (existingResponse) {
+                            // Mevcut yanıt varsa, formu doldur ve kilitle
+                            document.getElementById('participantName').value = existingResponse.name || '';
+                            document.getElementById('attend').value = existingResponse.attend || '';
+                            document.getElementById('adults').value = existingResponse.adults || '';
+                            document.getElementById('children').value = existingResponse.children || '';
+                            document.getElementById('mealPreference').value = existingResponse.mealPreference || '';
+                            document.getElementById('dietaryRestrictions').value = existingResponse.dietaryRestrictions || '';
+                            document.getElementById('transportation').value = existingResponse.transportation || '';
+                            document.getElementById('contactPreference').value = existingResponse.contactPreference || '';
+
+                            if (existingResponse.email) {
+                                document.getElementById('email-field').style.display = 'block';
+                                document.getElementById('email').value = existingResponse.email || '';
+                                document.getElementById('accept-email').checked = true;
+                                document.getElementById('email').disabled = true;
+                                document.getElementById('email').classList.add('disabled');
+                            }
+
+                            if (existingResponse.phone) {
+                                document.getElementById('phone-field').style.display = 'block';
+                                document.getElementById('phone').value = existingResponse.phone || '';
+                                document.getElementById('accept-phone').checked = true;
+                                document.getElementById('phone').disabled = true;
+                                document.getElementById('phone').classList.add('disabled');
+                            }
+
+                            // Katılımcı ismi alanını kilitle
+                            document.getElementById('participantName').disabled = true;
+                            document.getElementById('participantName').classList.add('disabled');
+
+                            // Formu açık bırak veya kapat (isteğe bağlı)
+                            // document.getElementById('rsvp-form').style.display = 'none';
+                        } else {
+                            // Firestore'da kayıt yoksa, localStorage'u temizle ve formu aç
+                            localStorage.removeItem('rsvpData');
+                        }
+                    } else {
+                        // Belge bulunamadıysa, localStorage'u temizle
+                        localStorage.removeItem('rsvpData');
+                    }
+                }).catch(function(error) {
+                    console.log("Firestore'dan veri alınırken hata oluştu: ", error);
+                });
+            }
+        }
+
+        // İletişim alanlarını kilitle
+        function lockContactFields(contactPref) {
+            if (contactPref === 'Email') {
+                document.getElementById('email').disabled = true;
+                document.getElementById('email').classList.add('disabled');
+                document.getElementById('accept-email').disabled = true;
+            } else if (contactPref === 'Phone number') {
+                document.getElementById('phone').disabled = true;
+                document.getElementById('phone').classList.add('disabled');
+                document.getElementById('accept-phone').disabled = true;
+            }
+        }
+
+        // Form verilerini kaydet ve güncelle
+        document.getElementById('submit-btn').addEventListener('click', function() {
+            // Form verilerini al
+            var rsvpResponses = {
+                name: document.getElementById('participantName').value.trim(),
+                attend: document.getElementById('attend').value || '',
+                adults: document.getElementById('adults').value || '',
+                children: document.getElementById('children').value || '',
+                mealPreference: document.getElementById('mealPreference').value || '',
+                dietaryRestrictions: document.getElementById('dietaryRestrictions').value || '',
+                transportation: document.getElementById('transportation').value || '',
+                contactPreference: document.getElementById('contactPreference').value || '',
+                email: document.getElementById('email').value.trim() || '',
+                phone: document.getElementById('phone').value.trim() || ''
+            };
+
+            // Aile İsmi zorunlu
+            if (!rsvpResponses.name) {
+                alert("Lütfen aile isminizi giriniz.");
+                return;
+            }
+
+            // Email veya Telefon girilmişse, ilgili checkbox'un işaretlenmesi zorunlu
+            if (rsvpResponses.email) {
+                if (!document.getElementById('accept-email').checked) {
+                    alert("Email adresinizi kullanabilmek için veri güvenliği politikasını kabul etmelisiniz.");
+                    return;
+                }
+            }
+
+            if (rsvpResponses.phone) {
+                if (!document.getElementById('accept-phone').checked) {
+                    alert("Telefon numaranızı kullanabilmek için veri güvenliği politikasını kabul etmelisiniz.");
+                    return;
+                }
+            }
+
+            // Firestore işlemi: rsvpResponses dizisini güncelle veya ekle
+            var docRef = db.collection("numbers").doc("h9o5jNodUi24Qx1e1Y1bkr");
+
+            // Run a transaction to safely read and write
+            db.runTransaction(function(transaction) {
+                return transaction.get(docRef).then(function(doc) {
+                    if (!doc.exists) {
+                        throw "Belge bulunamadı!";
+                    }
+
+                    var data = doc.data();
+                    var responses = data.rsvpResponses || [];
+
+                    // Benzersizliği kontrol etmek için participantName'e göre kontrol et
+                    var existingIndex = responses.findIndex(function(response) {
+                        return response.name.trim().toLowerCase() === rsvpResponses.name.trim().toLowerCase();
+                    });
+
+                    if (existingIndex !== -1) {
+                        // Mevcut yanıt varsa, güncelleme yap
+                        responses[existingIndex] = rsvpResponses;
+                        transaction.update(docRef, { rsvpResponses: responses });
+                        alert("RSVP yanıtınız başarıyla güncellendi!");
+
+                        // İletişim alanlarını kilitle
+                        lockContactFields(rsvpResponses.contactPreference);
+
+                        // Katılımcı ismi alanını kilitle
+                        document.getElementById('participantName').disabled = true;
+                        document.getElementById('participantName').classList.add('disabled');
+
+                        // Formu kapat
+                        document.getElementById('rsvp-form').style.display = 'none';
+                    } else {
+                        // Yeni bir yanıt ekle
+                        responses.push(rsvpResponses);
+                        transaction.update(docRef, { rsvpResponses: responses });
+                        alert("RSVP yanıtınız başarıyla kaydedildi!");
+
+                        // Veriyi localStorage'a kaydet
+                        localStorage.setItem('rsvpData', JSON.stringify(rsvpResponses));
+
+                        // İletişim alanlarını kilitle
+                        lockContactFields(rsvpResponses.contactPreference);
+
+                        // Katılımcı ismi alanını kilitle
+                        document.getElementById('participantName').disabled = true;
+                        document.getElementById('participantName').classList.add('disabled');
+
+                        // Formu kapat
+                        document.getElementById('rsvp-form').style.display = 'none';
+                    }
+                });
+            }).catch(function(error) {
+                console.error("RSVP kaydedilirken hata oluştu: ", error);
+                alert("RSVP kaydedilirken bir hata oluştu. Lütfen tekrar deneyiniz.");
+            });
+        });
+
+        // Sayfa yüklendiğinde form verilerini yükle
+        window.onload = function() {
+            loadFormData();
+        };
+    </script>
+</body>
+</html>
